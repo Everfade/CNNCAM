@@ -1,13 +1,14 @@
 import numpy as np
 import tensorflow as tf
+from matplotlib.colors import ListedColormap
+
 from CaAttributes import CaNeighbourhoods, MemoryTypes, RuleTypes
 import ca_funcs
 from scipy.signal import convolve2d
+import matplotlib.pyplot as plt
 
 
 class CaMemory:
-    # Constructor method
-
     def __init__(self, grid_size, memory_horizon=0, initial_state=None, rule_type=RuleTypes.InnerTotalistic,
                  neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Default):
         self.rule_sheet = None
@@ -24,6 +25,21 @@ class CaMemory:
             self.state = initial_state
         else:
             self.state = np.zeros((grid_size, grid_size))
+
+    def render_state(self):
+        cmap_colors = ["#ae8cc2", "#28a185"]
+        cmap = ListedColormap(cmap_colors)
+
+        plt.figure(facecolor='#242236')
+        plt.imshow(self.state, cmap=cmap)
+        plt.xticks(np.arange(-0.5, self.state.shape[1], 1), [])
+        plt.yticks(np.arange(-0.5, self.state.shape[0], 1), [])
+        plt.title('CA state:' + str(len(self.states)), color="white",fontsize=14)
+        plt.grid(True, color='black', linewidth=0.5)
+        plt.text(self.state.shape[1] / 2, self.state.shape[1], "Memory Type: "+str(self.memory_type.value)  +
+                 ", " + str(self.memory_horizon), color='white', ha='center', va='top',
+                 fontsize=12)
+        plt.show()
 
     def set_rule(self, rule_sheet):
         # check if plausible
