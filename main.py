@@ -12,13 +12,22 @@ def print_hi(name):
 if __name__ == '__main__':
     print_hi('PyCharm')
     array = np.random.choice([0, 1], size=(10, 10))
-    print(array)
-    ca = CaMemory(10, 0, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
-                  neighbourhood_type=CaNeighbourhoods.Von_Neumann
-                  , memory_type=MemoryTypes.Default)
-    ca.set_rule([[0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0]])
-    ca.render_state()
-    ca.step()
-    ca.render_state()
+    gol = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
+                   neighbourhood_type=CaNeighbourhoods.Von_Neumann
+                   , memory_type=MemoryTypes.Default)
+    gol_m = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
+                     neighbourhood_type=CaNeighbourhoods.Von_Neumann
+                     , memory_type=MemoryTypes.Most_Frequent, memory_horizon=3)
+    gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0,0], [0, 0, 1, 1, 0, 0, 0, 0,0]])
+    gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0,0], [0, 0, 1, 1, 0, 0, 0, 0,0]])
+    gol.step()
+    gol_m.step()
+    gol.step()
+    gol_m.step()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    gol.step()
+    gol_m.step()
+    gol.step()
+    gol_m.step()
+    gol.render_state()
+    gol_m.render_state()
