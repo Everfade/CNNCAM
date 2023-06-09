@@ -17,6 +17,8 @@ if __name__ == '__main__':
                   neighbourhood_type=CaNeighbourhoods.Von_Neumann
                   , memory_type=MemoryTypes.Default)
     ca.set_rule([[0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0]])
+    ca.render_state()
     ca.step()
+    ca.render_state()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
