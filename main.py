@@ -18,16 +18,9 @@ if __name__ == '__main__':
     gol_m = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
                      neighbourhood_type=CaNeighbourhoods.Von_Neumann
                      , memory_type=MemoryTypes.Most_Frequent, memory_horizon=3)
+    ca_g = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.Default,
+                     neighbourhood_type=CaNeighbourhoods.Von_Neumann
+                     , memory_type=MemoryTypes.Most_Frequent)
     gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0,0], [0, 0, 1, 1, 0, 0, 0, 0,0]])
     gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0,0], [0, 0, 1, 1, 0, 0, 0, 0,0]])
-    gol.step()
-    gol_m.step()
-    gol.step()
-    gol_m.step()
-
-    gol.step()
-    gol_m.step()
-    gol.step()
-    gol_m.step()
-    gol.render_state()
-    gol_m.render_state()
+    ca_g.generate_random_rule()
