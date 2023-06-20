@@ -124,22 +124,24 @@ class CaMemory:
         else:
             state = provided
         # only same gris
+        # Padding valid only starts where the kernel would fit fully  GILPINP Padds the input
         next_state = np.zeros((self.grid_size, self.grid_size,), dtype=int)
         if self.rule_type == RuleTypes.OuterTotalistic:
             kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
             convolved_grid = None
             if self.memory_type is MemoryTypes.Default:
-                convolved_grid = convolve2d(state, kernel, mode='same')
-                print(convolved_grid)
-            if self.memory_type is MemoryTypes.Most_Frequent:
-                convolved_grid = convolve2d(self.mostFrequentPastStateBinary(), kernel, mode='same')
+                convolved_grid = convolve2d(get_state_padded(state), kernel, mode='valid')
+            elif self.memory_type is MemoryTypes.Most_Frequent:
+                convolved_grid = convolve2d(get_state_padded(self.mostFrequentPastStateBinary()), kernel, mode='valid')
+            else:
+                assert True, "Bad Ca config."
             for r, cells in enumerate(state):
                 for c, cell in enumerate(cells):
                     # cell can be 1 0 therefore we can this already use this as indexing tool
                     # Todo add example comment
-                  #  print("grid: "+str(convolved_grid[r][c])+ " ind: "+str(r)+", "+str(c)+" cell:"+str(cell))
+                    # print("grid: "+str(convolved_grid[r][c])+ " ind: "+str(r)+", "+str(c)+" cell:"+str(cell))
                     next_state[r][c] = self.rule_sheet[cell][convolved_grid[r][c]]
-                 #   print("maps to "+ str(  next_state[r][c]))
+                #  print("maps to "+ str(  next_state[r][c]))
             if provided is None:
                 self.states.append(next_state)
                 self.state = next_state
