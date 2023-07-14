@@ -85,10 +85,10 @@ def initialize_model(shape, layer_dims, nhood=1, num_classes=2, totalistic=False
     
     for i in range(1, len(layer_dims)):
         model.add(tf.keras.layers.Dense(layer_dims[i],  activation='relu',
-                                        kernel_initializer=tf.keras.initializers.he_normal(), 
+                                        kernel_initializer=tf.keras.initializers.Ones(), 
                                         bias_initializer=tf.keras.initializers.he_normal()))
-    model.add(tf.keras.layers.Dense(num_classes,  activation='relu',
-                                    kernel_initializer=tf.keras.initializers.he_normal(), 
+    model.add(tf.keras.layers.Dense(num_classes,  activation='softmax',
+                                   kernel_initializer=tf.keras.initializers.Ones(), 
                                     bias_initializer=tf.keras.initializers.he_normal()))
     #model.add(tf.keras.layers.Reshape(target_shape=(-1, wspan, hspan)))
     return model

@@ -8,11 +8,17 @@ from train_ca import *
 import matplotlib.pyplot as plt
 import os
 from sklearn.model_selection import train_test_split
-from keras.callbacks import Callback
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
- 
+def accuracy(y_true, y_pred):
+    y_true_reshaped = tf.reshape(y_true, (-1, 2))
+    y_pred_reshaped = tf.reshape(y_pred, (-1, 2))
+    return tf.keras.metrics.categorical_accuracy(y_true_reshaped, y_pred_reshaped)
 
+class CustomCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        if logs.get('val_accuracy') == 1:
+            self.model.stop_training = True
 
  
 if __name__ == '__main__':
