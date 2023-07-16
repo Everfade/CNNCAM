@@ -1,5 +1,3 @@
-import warnings
-
 import tensorflow as tf
 import numpy as np
 
@@ -79,7 +77,7 @@ def initialize_model(shape, layer_dims, nhood=1, num_classes=2, totalistic=False
         model.add(tf.keras.layers.Reshape(target_shape=(-1, nhood+1)))
     else:
         model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding=conv_pad, 
-                                         activation='relu', kernel_initializer=tf.keras.initializers.he_normal(), 
+                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
                                          bias_initializer=tf.keras.initializers.he_normal()))
         model.add(tf.keras.layers.Reshape(target_shape=(-1, layer_dims[0])))
     
@@ -91,6 +89,37 @@ def initialize_model(shape, layer_dims, nhood=1, num_classes=2, totalistic=False
                                    kernel_initializer=tf.keras.initializers.Ones(), 
                                     bias_initializer=tf.keras.initializers.he_normal()))
     #model.add(tf.keras.layers.Reshape(target_shape=(-1, wspan, hspan)))
+    return model
+
+def initialize_model_recc(shape, layer_dims, memory_horizon=1, num_classes=2, totalistic=False, 
+                     nhood_type="moore", bc="periodic"):
+
+    wspan, hspan = shape
+    diameter = 3  # Neighborhood size for Moore neighborhood with 1-cell radius
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.InputLayer((wspan, hspan, memory_horizon + 1)))  # Input includes past states
+    
+    if bc == "periodic":
+        model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding='same',
+                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
+                                         bias_initializer=tf.keras.initializers.he_normal()))
+    else:
+        model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding='valid',
+                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
+                                         bias_initializer=tf.keras.initializers.he_normal()))
+
+    model.add(tf.keras.layers.Reshape(target_shape=(-1, layer_dims[0])))
+    model.add(tf.keras.layers.LSTM(layer_dims[1], return_sequences=False))  # LSTM layer for memory modeling
+    
+    for i in range(2, len(layer_dims)):
+        model.add(tf.keras.layers.Dense(layer_dims[i], activation='relu',
+                                        kernel_initializer=tf.keras.initializers.Ones(), 
+                                        bias_initializer=tf.keras.initializers.he_normal()))
+    
+    model.add(tf.keras.layers.Dense(num_classes, activation='softmax',
+                                    kernel_initializer=tf.keras.initializers.Ones(), 
+                                    bias_initializer=tf.keras.initializers.he_normal()))
+    
     return model
 
 

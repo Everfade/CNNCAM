@@ -38,9 +38,26 @@ class CaMemory:
             self.state = np.zeros((grid_size, grid_size), dtype=int)
 
     def generate_training_data(self, x_values):
+        print("version 0.2")
         y_values = []
         for x_value in x_values:
             y_values.append(self.step(x_value))
+        return y_values
+    #returns a evolution secquence twice the lengths of the memory horzon
+    def generate_training_data_memory(self, x_values,sequence_length=3):
+    
+        if sequence_length < self.memory_horizon:
+            raise TypeError("Memory Horizon should be lower than the sequence length to observe memory effects. "  )
+
+
+        y_values = []
+        for i in range(0,len(x_values)):
+            self.states=[]
+            self.states.append(x_values[i])
+            self.steps(sequence_length)
+            data_point=self.states
+            
+            y_values.append(data_point)
         return y_values
 
     """
@@ -117,7 +134,7 @@ class CaMemory:
        Takes one step in the deterministic evolution of the system
        """
 
-    def step(self, provided=None):
+    def step(self, provided=None,set_state=False):
         state = None
         if provided is None:
             state = self.state
@@ -132,6 +149,7 @@ class CaMemory:
             if self.memory_type is MemoryTypes.Default:
                 convolved_grid = convolve2d(get_state_padded(state), kernel, mode='valid')
             elif self.memory_type is MemoryTypes.Most_Frequent:
+ 
                 convolved_grid = convolve2d(get_state_padded(self.mostFrequentPastStateBinary()), kernel, mode='valid')
             else:
                 assert True, "Bad Ca config."
@@ -161,7 +179,7 @@ class CaMemory:
                         if (pre_image == kernel.flatten()).all():
                             next_state[i, j] = self.rule_sheet[1][index]
                             break
-            if provided is None:
+            if provided is None or set_state :
                 self.states.append(next_state)
                 self.state = next_state
             return next_state
@@ -175,14 +193,27 @@ class CaMemory:
         for i in range(0, n):
             self.step()
 
+    #Resets CA
+    def set_state_reset(self,state):
+        self.state=state
+        self.states=[]
+        self.states.append(self.state)
+
     """
         Calculates the most frequent past states for binary CA for every grid value
     """
 
+
     def mostFrequentPastStateBinary(self):
+    
+        if len(self.states)<=self.memory_horizon:
+            return self.state
         most_frequent = np.zeros(shape=(self.grid_size, self.grid_size), dtype=int)
         # if self.memory_type== MemoryTypes.Most_Frequent:
         # The amounts of past states to be checked depends on memory_horizon
+
+        #If there are less than T past states the NN behaves like it would without memory
+
         for state in self.states[-self.memory_horizon:]:
             for i in range(0, len(state)):
                 for j in range(0, len(state)):
