@@ -22,7 +22,7 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
  
 if __name__ == '__main__':
-    SEED = 3
+    SEED = 1
     print("start")
     os.environ['PYTHONHASHSEED']=str(SEED)
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'  # TF 2.1
@@ -63,6 +63,9 @@ if __name__ == '__main__':
 
     x_train, x_val = sequences_reshaped[:split_index] , sequences_reshaped[split_index:]     
     y_train, y_val = Y_val_onehot[:split_index], Y_val_onehot[split_index:]
+    split_index=len(y_val)//2
+    y_val, y_test = y_val[:split_index], y_val[split_index:]
+    x_val, x_test = x_val[:split_index] , x_val[split_index:]   
  
   
     
@@ -79,12 +82,12 @@ if __name__ == '__main__':
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), loss=loss, metrics=['accuracy'])
     model.summary()
     early_stopping_callback = CustomCallback()
-    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=5       , batch_size=10 )
+    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=1       , batch_size=10 )
     custom_layer = model.layers[1]
     print(model.layers)
     print(custom_layer.trainable_variables)   
- 
-    #predictions = model.predict(test_sequence)
+    print(split_index)
+    predictions = model.predict(x_test)
   
     final=[]
     errors=[]
@@ -99,10 +102,10 @@ if __name__ == '__main__':
              res[1]=0
              errors.append(row)
          final.append(res)
-    y_test_reshaped=np.array(Y_test).reshape(-1,100,2)
+    y_test_reshaped=np.array(y_test).reshape(-1,100,2)
     final_pred_reshaped=np.array(final).reshape(-1,100,2)
     accuracy = (y_test_reshaped == final_pred_reshaped).mean()
-    print(f"Test Accuracy: {accuracy}")
+    print(f"Test Accuracy: {accuracy} Test-Set Size: {len(x_test)}")
     print(f"Errors: {len(errors)}")
  
     
