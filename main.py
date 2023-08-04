@@ -22,6 +22,7 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
  
 if __name__ == '__main__':
+    #tf.config.list_physical_devices('GPU')
     tf.config.threading.set_inter_op_parallelism_threads(1)
    # 2100 outer totalistic
     data_size, wspan, hspan = (2100, 10, 10)
@@ -31,19 +32,19 @@ if __name__ == '__main__':
     gol = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
                    neighbourhood_type=CaNeighbourhoods.Von_Neumann
                    , memory_type=MemoryTypes.Default)
-    gol_m = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
-                     neighbourhood_type=CaNeighbourhoods.Von_Neumann
-                     , memory_type=MemoryTypes.Most_Frequent, memory_horizon=1)
+   
     
 
     gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
-    gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
+    
+ 
     
    
  
     
     y_values = gol.generate_training_data(x_values)   
-    y_values_m=gol_m.generate_training_data_memory(x_values,sequence_length=1)
+  
+  
    # gol implementation is confirmed to be equivalent
    # gol_gp = make_game_of_life()
    # y_values = gol_gp(tf.convert_to_tensor(x_values, tf.float32))
@@ -59,7 +60,7 @@ if __name__ == '__main__':
     Y_onehot = tf.squeeze(tf.one_hot(tf.cast(Y_data, tf.int32), num_classes))
     X_train, X_test, Y_train, Y_test = train_test_split(np.array(X_data ),np.array(Y_onehot), test_size=0.75, random_state=42)
     X_val, X_test, Y_val, Y_test = train_test_split(np.array(X_train ),np.array(Y_train), test_size=0.20, random_state=42)
-    SEED = 1
+    SEED = 2
 
     os.environ['PYTHONHASHSEED']=str(SEED)
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'  # TF 2.1
@@ -89,7 +90,7 @@ if __name__ == '__main__':
 
 
     model = initialize_model((wspan, hspan), layer_dims, num_classes,totalistic=True)
- 
+  
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),loss=loss_ms_error, metrics=[accuracy])
 
 
@@ -100,8 +101,7 @@ if __name__ == '__main__':
     Y_val_onehot = tf.squeeze(tf.one_hot(tf.cast(Y_val, tf.int32), num_classes))
   
     callback = tf.keras.callbacks.EarlyStopping(monitor='accuarcy', patience=3)
-    train_history = model.fit(x=X_train, y=Y_train ,validation_data=(X_val,Y_val ) ,
-                               epochs=1500, batch_size=10, verbose=1 ,callbacks=[early_stopping_callback])
+    train_history = model.fit(x=X_train, y=Y_train ,validation_data=(X_val,Y_val ) ,epochs=1500, batch_size=10, verbose=1 ,callbacks=[early_stopping_callback])
     #print(train_history.history["loss"])
     #plt.plot(train_history.history['loss'], 'k')
     #plt.show()

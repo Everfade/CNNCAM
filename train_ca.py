@@ -1,7 +1,45 @@
 import tensorflow as tf
 import numpy as np
 
-import collections
+class MemoryLayer(tf.keras.layers.Layer):
+    def __init__(self, units=100, **kwargs):
+        super(MemoryLayer, self).__init__(**kwargs)
+        self.units = units
+       
+
+    def build(self, input_shape):
+        print(input_shape)
+        #mem times number of cells for ex (-1,3,10,10)-> list of 3 x100 should sum across the first index  so it should have  300 weights
+        self.weight = self.add_weight(name="layer_weights", shape=((input_shape[2]  ,self.units)),
+                                     initializer=tf.keras.initializers.ones(), trainable=True)
+  
+        #threshold learnable
+      #  self.alpha = tf.Variable(1 ,dtype=tf.float32,trainable=True , name="alpha")
+ 
+
+        super(MemoryLayer, self).build(input_shape)
+
+    def call(self, inputs):
+        assert len(inputs.shape) == 4
+        batch_size = tf.shape(inputs)[0]
+
+        weighted_sum = tf.zeros((batch_size, self.units), dtype=tf.float32)
+        values=inputs[0][0]
+        for i in range(inputs.shape[2] ):
+            weighted_sum += values[i]*self.weight[i]
+      
+          #  print("weighted_sum")
+           # print(inputs.shape[1])
+           # tf.print(tf.reshape(values[i],shape=(10,10)),summarize=100)
+   
+      #  relu_output =tf.nn.relu(weighted_sum-self.alpha)
+       # rounded_output = tf.round(relu_output)
+        #activated_output =tf.where(weighted_sum >= self.alpha, 1.0, 0.0) 
+      
+        return weighted_sum
+    
+    
+
 
 def periodic_padding(imbatch, padding=1):
     '''
@@ -90,38 +128,68 @@ def initialize_model(shape, layer_dims, nhood=1, num_classes=2, totalistic=False
                                     bias_initializer=tf.keras.initializers.he_normal()))
     #model.add(tf.keras.layers.Reshape(target_shape=(-1, wspan, hspan)))
     return model
-
-def initialize_model_recc(shape, layer_dims, memory_horizon=1, num_classes=2, totalistic=False, 
-                     nhood_type="moore", bc="periodic"):
-
+ 
+def initialize_model_memory(shape, layer_dims, nhood=1, num_classes=2, totalistic=False,memory_horizon=3, 
+                      nhood_type="moore", bc="periodic"):
+  
     wspan, hspan = shape
-    diameter = 3  # Neighborhood size for Moore neighborhood with 1-cell radius
+    diameter = 2*nhood+1
+    input_shape = (-1,memory_horizon, wspan* hspan)
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.InputLayer((wspan, hspan, memory_horizon + 1)))  # Input includes past states
-    
-    if bc == "periodic":
-        model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding='same',
-                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
-                                         bias_initializer=tf.keras.initializers.he_normal()))
-    else:
-        model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding='valid',
-                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
-                                         bias_initializer=tf.keras.initializers.he_normal()))
+    model.add(tf.keras.layers.InputLayer((memory_horizon,wspan, hspan )))
+    model.add(tf.keras.layers.Reshape(target_shape=(input_shape))) 
+   
+ 
+    model.add(MemoryLayer(units=wspan*hspan, input_shape=input_shape))
 
-    model.add(tf.keras.layers.Reshape(target_shape=(-1, layer_dims[0])))
-    model.add(tf.keras.layers.LSTM(layer_dims[1], return_sequences=False))  # LSTM layer for memory modeling
+    model.add(tf.keras.layers.Reshape(target_shape=(wspan,hspan,1)))
+    model.add(tf.keras.layers.ThresholdedReLU(input_shape=(-1,wspan,hspan,1),theta=1))
+    if bc == "periodic":
+        model.add(Wraparound2D(padding=nhood))
+        conv_pad = 'valid'
+    else:
+        conv_pad = 'same'
     
-    for i in range(2, len(layer_dims)):
-        model.add(tf.keras.layers.Dense(layer_dims[i], activation='relu',
+    if totalistic:
+        model.add(SymmetricConvolution(nhood, n_type=nhood_type, bc=bc))
+        model.add(tf.keras.layers.Reshape(target_shape=(-1, nhood+1)))
+    else:
+        model.add(tf.keras.layers.Conv2D(layer_dims[0], kernel_size=[diameter, diameter], padding=conv_pad, 
+                                         activation='relu', kernel_initializer=tf.keras.initializers.Ones(), 
+                                         bias_initializer=tf.keras.initializers.he_normal()))
+        model.add(tf.keras.layers.Reshape(target_shape=(-1, layer_dims[0])))
+    
+    for i in range(1, len(layer_dims)):
+        model.add(tf.keras.layers.Dense(layer_dims[i],  activation='relu',
                                         kernel_initializer=tf.keras.initializers.Ones(), 
                                         bias_initializer=tf.keras.initializers.he_normal()))
-    
-    model.add(tf.keras.layers.Dense(num_classes, activation='softmax',
-                                    kernel_initializer=tf.keras.initializers.Ones(), 
+    model.add(tf.keras.layers.Dense(num_classes,  activation='softmax',
+                                   kernel_initializer=tf.keras.initializers.Ones(), 
                                     bias_initializer=tf.keras.initializers.he_normal()))
-    
+    #model.add(tf.keras.layers.Reshape(target_shape=(-1, wspan, hspan)))
     return model
 
+def initialize_model_memory_debug(shape, layer_dims, nhood=1, num_classes=2, totalistic=False,memory_horizon=3, 
+                      nhood_type="moore", bc="periodic"):
+  
+    wspan, hspan = shape
+    diameter = 2*nhood+1
+    input_shape = (-1,memory_horizon, wspan* hspan)
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.InputLayer((memory_horizon,wspan, hspan )))
+    model.add(tf.keras.layers.Reshape(target_shape=(input_shape))) 
+   
+ 
+    model.add(MemoryLayer(units=wspan*hspan, input_shape=input_shape))
+    model.add(tf.keras.layers.Reshape(target_shape=(wspan,hspan)))
+    model.add(tf.keras.layers.Dense(100,  activation='relu',
+                                        kernel_initializer=tf.keras.initializers.Ones(), 
+                                        bias_initializer=tf.keras.initializers.he_normal()))
+    model.add(tf.keras.layers.Dense(num_classes,  activation='softmax',
+                                   kernel_initializer=tf.keras.initializers.Ones(), 
+                                    bias_initializer=tf.keras.initializers.he_normal()))
+     
+    return model
 
 def logit_to_pred(logits, shape=None):
     """

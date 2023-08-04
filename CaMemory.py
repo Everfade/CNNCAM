@@ -44,7 +44,7 @@ class CaMemory:
             y_values.append(self.step(x_value))
         return y_values
     #returns a evolution secquence twice the lengths of the memory horzon
-    def generate_training_data_memory(self, x_values,sequence_length=3):
+    def generate_training_data_sequences(self, x_values,sequence_length=3,random_length=False,upper_bound=10):
     
         if sequence_length < self.memory_horizon:
             raise TypeError("Memory Horizon should be lower than the sequence length to observe memory effects. "  )
@@ -54,14 +54,17 @@ class CaMemory:
         for i in range(0,len(x_values)):
             self.states=[]
             self.states.append(x_values[i])
-            self.steps(sequence_length)
+            self.state=self.states[0]
+            if random_length:
+                sequence_length=random.randint(self.memory_horizon+1, upper_bound)
+            self.step_multiple(sequence_length)
             data_point=self.states
-            
-            y_values.append(data_point)
+             
+            y_values.append(data_point )
         return y_values
 
     """
-      Generate a random CA rule that maps each of the 2^9 possible states to a random state (0,1)
+      Generate a random CA rule that maps each of the 2^9 possible   to a random state (0,1)
       For loop generates all permutations for 0-8 possible values of 1 and the array with all 1s is appended at the end
       seed : to control np.random
       """
@@ -151,8 +154,11 @@ class CaMemory:
             elif self.memory_type is MemoryTypes.Most_Frequent:
  
                 convolved_grid = convolve2d(get_state_padded(self.mostFrequentPastStateBinary()), kernel, mode='valid')
+               
             else:
-                assert True, "Bad Ca config."
+                assert True, "Bad CA config."
+
+           
             for r, cells in enumerate(state):
                 for c, cell in enumerate(cells):
                     # cell can be 1 0 therefore we can this already use this as indexing tool
@@ -206,8 +212,8 @@ class CaMemory:
 
     def mostFrequentPastStateBinary(self):
     
-        if len(self.states)<=self.memory_horizon:
-            return self.state
+        if len(self.states)<self.memory_horizon:
+             return self.state
         most_frequent = np.zeros(shape=(self.grid_size, self.grid_size), dtype=int)
         # if self.memory_type== MemoryTypes.Most_Frequent:
         # The amounts of past states to be checked depends on memory_horizon
@@ -215,6 +221,7 @@ class CaMemory:
         #If there are less than T past states the NN behaves like it would without memory
 
         for state in self.states[-self.memory_horizon:]:
+
             for i in range(0, len(state)):
                 for j in range(0, len(state)):
                     most_frequent[i][j] += state[i][j]
@@ -222,11 +229,40 @@ class CaMemory:
         for i in range(0, most_frequent.shape[0]):
             for j in range(0, most_frequent.shape[1]):
                 # We can tell which as the most common past state based on the sum in binary CAs
-                if most_frequent[i][j] - 0.5 * len(self.states) > 0:
+                if most_frequent[i][j] - 0.5 * self.memory_horizon> 0:
                     most_frequent[i][j] = 1
-                elif most_frequent[i][j] - 0.5 * len(self.states) < 0:
+                elif most_frequent[i][j] - 0.5 * self.memory_horizon< 0:
                     most_frequent[i][j] = 0
                 else:
-                    most_frequent[i][j] = self.state[i][j]
+                    most_frequent[i][j] = self.states[-1][i][j] #last state
+    
+
+        return most_frequent
+    def mostFrequentPastStateBinaryProvided(self,provided_states):
+    
+        if len(provided_states)<self.memory_horizon:
+             return self.state
+        most_frequent = np.zeros(shape=(self.grid_size, self.grid_size), dtype=int)
+        # if self.memory_type== MemoryTypes.Most_Frequent:
+        # The amounts of past states to be checked depends on memory_horizon
+
+        #If there are less than T past states the NN behaves like it would without memory
+
+        for state in provided_states[-self.memory_horizon:]:
+
+            for i in range(0, len(state)):
+                for j in range(0, len(state)):
+                    most_frequent[i][j] += state[i][j]
+       
+        for i in range(0, most_frequent.shape[0]):
+            for j in range(0, most_frequent.shape[1]):
+                # We can tell which as the most common past state based on the sum in binary CAs
+                if most_frequent[i][j] - 0.5 * self.memory_horizon> 0:
+                    most_frequent[i][j] = 1
+                elif most_frequent[i][j] - 0.5 * self.memory_horizon< 0:
+                    most_frequent[i][j] = 0
+                else:
+                    most_frequent[i][j] =provided_states[-1][i][j]
+    
 
         return most_frequent
