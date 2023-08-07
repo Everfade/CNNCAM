@@ -68,18 +68,8 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     tf.random.set_seed(SEED)
     array = np.random.choice([0, 1], size=(10, 10))
-    gol_test_state=[
-       [0., 1., 0., 1., 1., 0., 1., 0., 1., 0.],
-       [1., 1., 1., 0., 0., 1., 0., 0., 1., 0.],
-       [1., 0., 1., 0., 0., 1., 1., 1., 1., 0.],
-       [1., 1., 1., 1., 0., 1., 0., 1., 0., 0.],
-       [1., 0., 1., 1., 1., 0., 1., 1., 1., 1.],
-       [1., 1., 0., 1., 1., 0., 0., 0., 0., 0.],
-       [0., 0., 1., 1., 1., 0., 1., 0., 1., 1.],
-       [1., 0., 1., 1., 0., 1., 1., 0., 0., 1.],
-       [0., 1., 1., 1., 1., 1., 0., 1., 0., 1.],
-       [0., 1., 1., 0., 0., 0., 0., 1., 1., 1.]]
-    gol_test_state=np.array(gol_test_state,dtype=int)
+
+    print(f"Test set size: {X_train.shape}")
 
     loss = lambda x, y: tf.keras.losses.categorical_crossentropy(tf.reshape(x, shape=(-1, num_classes)),
                                                                  tf.reshape(y, shape=(-1, num_classes)),
@@ -101,7 +91,7 @@ if __name__ == '__main__':
     Y_val_onehot = tf.squeeze(tf.one_hot(tf.cast(Y_val, tf.int32), num_classes))
   
     callback = tf.keras.callbacks.EarlyStopping(monitor='accuarcy', patience=3)
-    train_history = model.fit(x=X_train, y=Y_train ,validation_data=(X_val,Y_val ) ,epochs=1500, batch_size=10, verbose=1 ,callbacks=[early_stopping_callback])
+    train_history = model.fit(x=X_train, y=Y_train ,validation_data=(X_val,Y_val ) ,epochs=1500, batch_size=1, verbose=1 ,callbacks=[early_stopping_callback])
     #print(train_history.history["loss"])
     #plt.plot(train_history.history['loss'], 'k')
     #plt.show()

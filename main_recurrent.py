@@ -8,7 +8,6 @@ from train_ca import *
 import matplotlib.pyplot as plt
 import os
 from sklearn.model_selection import train_test_split
-import keras
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 def accuracy(y_true, y_pred):
@@ -23,9 +22,7 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
  
 if __name__ == '__main__':
-    #keras.saving.get_custom_objects().clear()
-    #Seedings and Config
-    SEED =2
+    SEED = 1
     print("start")
     os.environ['PYTHONHASHSEED']=str(SEED)
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'  # TF 2.1
@@ -33,35 +30,36 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     tf.random.set_seed(SEED)
     tf.config.threading.set_inter_op_parallelism_threads(1)
-    # 2100 outer totalistic  Generating Data
+    # 2100 outer totalistic
     samples=2100
     data_size, wspan, hspan = (samples, 10, 10)
     x_values = np.random.choice([0, 1], (data_size, wspan, hspan), p=[.5, .5])
-    
+    array = np.random.choice([0, 1], size=(10, 10))
     MEMORY_CONSTANT=2
     num_classes = 2  
     sequence_length=MEMORY_CONSTANT*2
-    gol_m = CaMemory(grid_size=10 , rule_type=RuleTypes.OuterTotalistic,
-                    neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Most_Frequent, memory_horizon=MEMORY_CONSTANT)
+    gol_m = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
+                    neighbourhood_type=CaNeighbourhoods.Von_Neumann
+                    , memory_type=MemoryTypes.Most_Frequent, memory_horizon=MEMORY_CONSTANT)
 
     
     gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
    
 
     sequences= np.array(gol_m.generate_training_data_sequences(x_values,sequence_length=sequence_length))
-    print(f"Training Data shape: {sequences.shape} ")
-    x_sequence=sequences[:,2:4:,:]
+    print(sequences.shape)
+    x_sequence=sequences[:,2:4,:,:]
     y_sequence=sequences[:,4,:,:]
    
  
   
  
-    sequences_reshaped = x_sequence.reshape(samples, -MEMORY_CONSTANT, wspan,hspan)
+    sequences_reshaped = x_sequence.reshape(samples, -1, wspan,hspan)
     sequences_reshaped=tf.constant(sequences_reshaped, dtype=tf.float32)
    
     
     Y_val_onehot = tf.squeeze(tf.one_hot(tf.cast( y_sequence.reshape(-1,  wspan* hspan,1), tf.int32), num_classes))
-    split_index = round(samples*0.5)
+    split_index = round(samples*0.75)
 
     x_train, x_val = sequences_reshaped[:split_index] , sequences_reshaped[split_index:]     
     y_train, y_val = Y_val_onehot[:split_index], Y_val_onehot[split_index:]
@@ -80,23 +78,17 @@ if __name__ == '__main__':
     layer_dims = [10, 10,10] 
   
 
-    model =initialize_model_memory((wspan, hspan), layer_dims, num_classes,totalistic=True,memory_horizon=MEMORY_CONSTANT) 
+    model =initialize_model_recurrent_naive((wspan, hspan), layer_dims, num_classes,totalistic=True,memory_horizon=MEMORY_CONSTANT) 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), loss=loss, metrics=['accuracy'])
     model.summary()
     early_stopping_callback = CustomCallback()
-    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=15          , batch_size=1 ,callbacks=early_stopping_callback )
+    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=100       , batch_size=10)
     custom_layer = model.layers[1]
     print(model.layers)
     print(custom_layer.trainable_variables)   
     print(split_index)
-    predictions = []
-    print(model.weights)
-    print("Training Completed, Starting evaluation...")
-    for x in x_test:
-        predictions.append(model.predict(np.array(x).reshape(-1,MEMORY_CONSTANT,10,10),verbose=False))
-    predictions=np.array(predictions).reshape(-1,100,num_classes)
-    
-    
+    predictions = model.predict(x_test)
+  
     final=[]
     errors=[]
     for grid in predictions:
@@ -106,15 +98,15 @@ if __name__ == '__main__':
          res[np.argmin(row)]=0
          #Only relevant if network does not acchieve 100% accuracy
          if(res[0]==-1 or res[1]==-1):
+             res[0]=1
+             res[1]=0
              errors.append(row)
          final.append(res)
-    y_test_reshaped=np.array(y_test).reshape(-1,100,num_classes)
-    final_pred_reshaped=np.array(final).reshape(-1,100,num_classes)
+    y_test_reshaped=np.array(y_test).reshape(-1,100,2)
+    final_pred_reshaped=np.array(final).reshape(-1,100,2)
     accuracy = (y_test_reshaped == final_pred_reshaped).mean()
-    print()
     print(f"Test Accuracy: {accuracy} Test-Set Size: {len(x_test)}")
     print(f"Errors: {len(errors)}")
-    model.save("Mem1.h5")
  
     
    
