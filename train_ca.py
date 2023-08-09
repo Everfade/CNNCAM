@@ -14,9 +14,11 @@ class MemoryLayer(tf.keras.layers.Layer):
        
     def custom_initializer(self, shape, dtype=None):
         initial_values = tf.concat([tf.constant(0.5, shape=(1, self.units), dtype=dtype),
-                                    tf.constant(1.0, shape=(1, self.units), dtype=dtype)],
+                                    tf.constant(1.3, shape=(1, self.units), dtype=dtype),
+                                    tf.constant(1.3, shape=(1, self.units), dtype=dtype)],
                                    axis=0)
-                                   
+      #  initial_values =tf.constant(1.0, shape=(1, self.units), dtype=dtype)
+                                                      
         return initial_values
     
     def build(self, input_shape):
@@ -56,7 +58,7 @@ class MemoryLayer(tf.keras.layers.Layer):
    
       #  relu_output =tf.nn.relu(weighted_sum-self.alpha)
        # rounded_output = tf.round(relu_output)
-        activated_output =tf.where(weighted_sum >= 0.7, 1.0, 0.0) 
+        activated_output =tf.where(weighted_sum >= 1.7, 1.0, 0.0) 
       
         return activated_output
     
@@ -193,9 +195,6 @@ def initialize_model_memory(shape, layer_dims, nhood=1, num_classes=2, totalisti
 
 def initialize_model_memory_debug(shape, layer_dims, nhood=1, num_classes=2, totalistic=False,memory_horizon=3, 
                       nhood_type="moore", bc="periodic"):
-  
-   
-   
     wspan, hspan = shape
     diameter = 2*nhood+1
     input_shape = (memory_horizon, wspan* hspan)
@@ -269,6 +268,92 @@ def logit_to_pred(logits, shape=None):
     if shape:                 
         out = tf.reshape(labels, shape)
     return out
+def generate_permutations_list(inputs):
+    """
+    Generate all unique permutations of a list of 10x10 grids, including reflections
+    and 90-degree rotations.
+
+    Parameters:
+    inputs (list): List of input 10x10 grids (np.ndarray).
+
+    Returns:
+    permutations (np.ndarray): 3D array containing all unique permutations for each input.
+    """
+    permutations = []
+
+    for x in inputs:
+        perm=[]
+        # Original grid
+        perm.append(x.tolist())
+
+        # Reflect horizontally
+        reflected_horizontal = np.flip(x, axis=1)
+        perm.append(reflected_horizontal.tolist())
+
+        # Reflect vertically
+        reflected_vertical = np.flip(x, axis=0)
+        perm.append(reflected_vertical.tolist())
+
+        # Reflect horizontally and vertically (180-degree rotation)
+        reflected_both = np.flip(reflected_horizontal, axis=0)
+        perm.append(reflected_both.tolist())
+
+        # Rotate 90 degrees
+        rotated_90 = np.rot90(x, k=1)
+        perm.append(rotated_90.tolist())
+
+        # Rotate 180 degrees
+        rotated_180 = np.rot90(x, k=2)
+        perm.append(rotated_180.tolist())
+
+        # Rotate 270 degrees
+        rotated_270 = np.rot90(x, k=3)
+        perm.append(rotated_270.tolist())
+        permutations.append(perm)
+ 
+
+    return np.array(permutations)
+def generate_permutations(x):
+    """
+    Generate all unique permutations of a 10x10 grid, including reflections
+    and 90 degree rotations.
+
+    Parameters:
+    x (np.ndarray): Input 10x10 grid.
+
+    Returns:
+    permutations (list): List of all unique permutations.
+    """
+    permutations = []
+
+    # Original grid
+    permutations.append(x.tolist())
+
+    # Reflect horizontally
+    reflected_horizontal = np.flip(x, axis=1)
+    permutations.append(reflected_horizontal.tolist())
+
+    # Reflect vertically
+    reflected_vertical = np.flip(x, axis=0)
+    permutations.append(reflected_vertical.tolist())
+
+    # Reflect horizontally and vertically (180-degree rotation)
+    reflected_both = np.flip(reflected_horizontal, axis=0)
+    permutations.append(reflected_both.tolist())
+
+    # Rotate 90 degrees
+    rotated_90 = np.rot90(x, k=1)
+    permutations.append(rotated_90.tolist())
+
+    # Rotate 180 degrees
+    rotated_180 = np.rot90(x, k=2)
+    permutations.append(rotated_180.tolist())
+
+    # Rotate 270 degrees
+    rotated_270 = np.rot90(x, k=3)
+    permutations.append(rotated_270.tolist())
+
+    return permutations
 
 def augment_data(x, y, n=None):
     """

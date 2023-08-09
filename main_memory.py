@@ -18,15 +18,16 @@ def accuracy(y_true, y_pred):
 
 class CustomCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self,epoch, logs=None):
-        if logs.get('val_accuracy') == 1:
+        if logs.get('val_accuracy') >=0.9999:
             self.model.stop_training = True
+ 
 
  
 if __name__ == '__main__':
     #keras.saving.get_custom_objects().clear()
     #Seedings and Config
-    SEED =2
-    print("start")
+    SEED =3
+    print("Starting...")
     os.environ['PYTHONHASHSEED']=str(SEED)
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'  # TF 2.1
     random.seed(SEED)
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     data_size, wspan, hspan = (samples, 10, 10)
     x_values = np.random.choice([0, 1], (data_size, wspan, hspan), p=[.5, .5])
     
-    MEMORY_CONSTANT=2
+    MEMORY_CONSTANT=3
     num_classes = 2  
     sequence_length=MEMORY_CONSTANT*2
     gol_m = CaMemory(grid_size=10 , rule_type=RuleTypes.OuterTotalistic,
@@ -46,17 +47,53 @@ if __name__ == '__main__':
 
     
     gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
-   
+    gol = CaMemory(grid_size=10 , rule_type=RuleTypes.OuterTotalistic,
+                    neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Default, memory_horizon=MEMORY_CONSTANT)
+
+    
+    gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
 
     sequences= np.array(gol_m.generate_training_data_sequences(x_values,sequence_length=sequence_length))
+     
     print(f"Training Data shape: {sequences.shape} ")
-    x_sequence=sequences[:,2:4:,:]
-    y_sequence=sequences[:,4,:,:]
-   
  
+    precomp=[]
+    precompy=[]
+    minority=0
+    majority=0
+    while majority+minority <samples:
+        for v in np.array(gol_m.generate_training_data_sequences(np.random.choice([0, 1], (1, wspan, hspan), p=[.5, .5]),
+                                                                sequence_length=sequence_length))[:,0:3,:,:]:
+            gol_m.states=v
+            d=gol_m.mostFrequentPastStateBinaryProvided(v )
+            if np.sum(d,(0,1))<40:
+            
+                if majority<=minority:
+                    precomp.append(v)
+                    precompy.append(gol.step(d))
+                    majority+=1
+
+            else:
+                minority+=10
+                precomp.append(v)
+                y=gol.step(d)
+                precompy.append(y)
+                for i in range(0,10):
+                    n=np.array( generate_permutations_list(v))
+                    for val in np.rollaxis(n,1):
+                        precomp.append(val)
+                        d=gol_m.mostFrequentPastStateBinaryProvided(val )
+                        y=gol.step(d)
+                        precompy.append(y)  
+                print(f"Majority: {majority} Minority {minority}") 
+    x_sequence=np.array(precomp) 
+    print(x_sequence.shape)
+    y_sequence=np.array(precompy)#sequences[:,4,:,:]
   
  
-    sequences_reshaped = x_sequence.reshape(samples, -MEMORY_CONSTANT, wspan,hspan)
+    samples=x_sequence.shape[0]
+     
+    sequences_reshaped = x_sequence.reshape(-1, MEMORY_CONSTANT, wspan,hspan)
     sequences_reshaped=tf.constant(sequences_reshaped, dtype=tf.float32)
    
     
@@ -81,10 +118,12 @@ if __name__ == '__main__':
   
 
     model =initialize_model_memory((wspan, hspan), layer_dims, num_classes,totalistic=True,memory_horizon=MEMORY_CONSTANT) 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), loss=loss, metrics=['accuracy'])
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                   loss=loss, metrics=['accuracy'])
     model.summary()
     early_stopping_callback = CustomCallback()
-    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=15          , batch_size=1 ,callbacks=early_stopping_callback )
+    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=    1500     
+               , batch_size=1 ,callbacks=early_stopping_callback )
     custom_layer = model.layers[1]
     print(model.layers)
     print(custom_layer.trainable_variables)   
@@ -92,7 +131,7 @@ if __name__ == '__main__':
     predictions = []
     print(model.weights)
     print("Training Completed, Starting evaluation...")
-    for x in x_test:
+    for x in x_test[0:100]:
         predictions.append(model.predict(np.array(x).reshape(-1,MEMORY_CONSTANT,10,10),verbose=False))
     predictions=np.array(predictions).reshape(-1,100,num_classes)
     
@@ -108,7 +147,7 @@ if __name__ == '__main__':
          if(res[0]==-1 or res[1]==-1):
              errors.append(row)
          final.append(res)
-    y_test_reshaped=np.array(y_test).reshape(-1,100,num_classes)
+    y_test_reshaped=np.array(y_test[0:100]).reshape(-1,100,num_classes)
     final_pred_reshaped=np.array(final).reshape(-1,100,num_classes)
     accuracy = (y_test_reshaped == final_pred_reshaped).mean()
     print()
