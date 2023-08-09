@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # 2100 outer totalistic  Generating Data
     samples=2100
     data_size, wspan, hspan = (samples, 10, 10)
-    x_values = np.random.choice([0, 1], (data_size, wspan, hspan), p=[.5, .5])
+ 
     
     MEMORY_CONSTANT=3
     num_classes = 2  
@@ -53,9 +53,9 @@ if __name__ == '__main__':
     
     gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
 
-    sequences= np.array(gol_m.generate_training_data_sequences(x_values,sequence_length=sequence_length))
+    
      
-    print(f"Training Data shape: {sequences.shape} ")
+     
  
     precomp=[]
     precompy=[]
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 print(f"Majority: {majority} Minority {minority}") 
     x_sequence=np.array(precomp) 
     print(x_sequence.shape)
-    y_sequence=np.array(precompy)#sequences[:,4,:,:]
+    y_sequence=np.array(precompy)
   
  
     samples=x_sequence.shape[0]
