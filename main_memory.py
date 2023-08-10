@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import os
 from sklearn.model_selection import train_test_split
 import keras
+import wandb
+from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint 
+
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 def accuracy(y_true, y_pred):
@@ -24,6 +27,27 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
  
 if __name__ == '__main__':
+    wandb.init(
+    # set the wandb project where this run will be logged
+    project="CAMCNN",
+
+    # track hyperparameters and run metadata with wandb.config
+    config={
+        "layer_1": 512,
+        "activation_1": "relu",
+        "dropout": random.uniform(0.01, 0.80),
+        "layer_2": 10,
+        "activation_2": "softmax",
+        "optimizer": "sgd",
+        "loss": "sparse_categorical_crossentropy",
+        "metric": "accuracy",
+        "epoch": 8,
+        "batch_size": 256
+        }
+    )
+
+    # [optional] use wandb.config as your config
+    config = wandb.config
     #keras.saving.get_custom_objects().clear()
     #Seedings and Config
     SEED =3
@@ -123,7 +147,8 @@ if __name__ == '__main__':
     model.summary()
     early_stopping_callback = CustomCallback()
     model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=    1500     
-               , batch_size=1 ,callbacks=early_stopping_callback )
+               , batch_size=1 ,callbacks=[early_stopping_callback,WandbMetricsLogger(log_freq=5),
+                      WandbModelCheckpoint("models")] )
     custom_layer = model.layers[1]
     print(model.layers)
     print(custom_layer.trainable_variables)   
@@ -153,6 +178,7 @@ if __name__ == '__main__':
     print()
     print(f"Test Accuracy: {accuracy} Test-Set Size: {len(x_test)}")
     print(f"Errors: {len(errors)}")
+    wandb.finish()
     model.save("Mem1.h5")
  
     
