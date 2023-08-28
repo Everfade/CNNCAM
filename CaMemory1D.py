@@ -148,14 +148,17 @@ class CaMemory1D:
 
         elif self.rule_type == RuleTypes.Default:
             padded_state = get_state_padded(state)
-            for i in range(1, padded_state.shape[0] - 2):
+            for i in range(1, padded_state.shape[0] - 1):
+              
+                    print(padded_state)
                 
-                    # Define the indices for the 3x3 kernel
-                    start_row = i - 1
-                    end_row = min(i + 2, padded_state.shape[0])
+              
+                    start_row = i -1
+                    end_row = min(i + 2, padded_state.shape[0] )
                  
                
                     kernel = padded_state[start_row:end_row ]
+                    print(kernel)
                     for index, pre_image in enumerate(self.rule_sheet[0]):
                         if (pre_image == kernel.flatten()).all():
                             print(pre_image)
