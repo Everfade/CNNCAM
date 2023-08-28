@@ -97,7 +97,7 @@ class CaMemory1D:
         plt.imshow(np_array, cmap=cmap)
         plt.xticks(np.arange(-0.5, self.state.shape[0], 1), [])
         plt.yticks(np.arange(-0.5, len(self.states), 1), [])
-        plt.title(label + " CA state:" + str(len(self.states)), color="white", fontsize=14)
+        plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
         plt.grid(True, color="black", linewidth=0.5)
        
         plt.show()
@@ -158,8 +158,10 @@ class CaMemory1D:
                     kernel = padded_state[start_row:end_row ]
                     for index, pre_image in enumerate(self.rule_sheet[0]):
                         if (pre_image == kernel.flatten()).all():
+                            print(pre_image)
+                            print(self.rule_sheet[1][index][0])
 
-                            next_state[i ] =  self.rule_sheet[1][index]
+                            next_state[i ] =  self.rule_sheet[1][index][0]
                             break
             if provided is None or set_state :
                 self.states.append(next_state.tolist())
