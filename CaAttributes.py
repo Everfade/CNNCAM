@@ -1,5 +1,5 @@
 from enum import Enum
-
+import tensorflow as tf
 
 class RuleTypes(Enum):
     OuterTotalistic = 'outer_totalistic'

@@ -22,39 +22,78 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
  
 if __name__ == '__main__':
-    SEED = 1
-    print("start")
+    SEED =3
+    print("Starting...")
     os.environ['PYTHONHASHSEED']=str(SEED)
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'  # TF 2.1
     random.seed(SEED)
     np.random.seed(SEED)
     tf.random.set_seed(SEED)
     tf.config.threading.set_inter_op_parallelism_threads(1)
-    # 2100 outer totalistic
-    samples=2100
+    # 2100 outer totalistic  Generating Data
+    samples=210
     data_size, wspan, hspan = (samples, 10, 10)
-    x_values = np.random.choice([0, 1], (data_size, wspan, hspan), p=[.5, .5])
-    array = np.random.choice([0, 1], size=(10, 10))
-    MEMORY_CONSTANT=2
+ 
+    
+    MEMORY_CONSTANT=3
     num_classes = 2  
     sequence_length=MEMORY_CONSTANT*2
-    gol_m = CaMemory(grid_size=10, initial_state=array, rule_type=RuleTypes.OuterTotalistic,
-                    neighbourhood_type=CaNeighbourhoods.Von_Neumann
-                    , memory_type=MemoryTypes.Most_Frequent, memory_horizon=MEMORY_CONSTANT)
+    gol_m = CaMemory(grid_size=10 , rule_type=RuleTypes.OuterTotalistic,
+                    neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Most_Frequent, memory_horizon=MEMORY_CONSTANT)
 
     
     gol_m.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
-   
+    gol = CaMemory(grid_size=10 , rule_type=RuleTypes.OuterTotalistic,
+                    neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Default, memory_horizon=MEMORY_CONSTANT)
 
-    sequences= np.array(gol_m.generate_training_data_sequences(x_values,sequence_length=sequence_length))
-    print(sequences.shape)
-    x_sequence=sequences[:,2:4,:,:]
-    y_sequence=sequences[:,4,:,:]
+    
+    gol.set_rule([[0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0, 0, 0, 0]])
+
+    
+     
+     
+ 
+    precomp=[]
+    precompy=[]
+    minority=0
+    majority=0
+    while majority+minority <samples:
+        for v in np.array(gol_m.generate_training_data_sequences(np.random.choice([0, 1], (1, wspan, hspan), p=[.5, .5]),
+                                                                sequence_length=sequence_length))[:,0:3,:,:]:
+            gol_m.states=v
+            d=gol_m.mostFrequentPastStateBinaryProvided(v )
+            if np.sum(d,(0,1))<40:
+            
+                if majority<=minority:
+                    precomp.append(v)
+                    precompy.append(gol.step(d))
+                    majority+=1
+
+            else:
+                minority+=10
+                precomp.append(v)
+                y=gol.step(d)
+                precompy.append(y)
+                for i in range(0,10):
+                    n=np.array( generate_permutations_list(v))
+                    for val in np.rollaxis(n,1):
+                        precomp.append(val)
+                        d=gol_m.mostFrequentPastStateBinaryProvided(val )
+                        y=gol.step(d)
+                        precompy.append(y)  
+                print(f"Majority: {majority} Minority {minority}") 
+    x_sequence=np.array(precomp) 
+    print(x_sequence.shape)
+    y_sequence=np.array(precompy)
+  
+ 
+    samples=x_sequence.shape[0]
+    y_sequence=np.array(precompy)
    
  
   
  
-    sequences_reshaped = x_sequence.reshape(samples, -1, wspan,hspan)
+    sequences_reshaped = x_sequence.reshape(-1,MEMORY_CONSTANT, wspan,hspan)
     sequences_reshaped=tf.constant(sequences_reshaped, dtype=tf.float32)
    
     
@@ -76,13 +115,21 @@ if __name__ == '__main__':
    
     shape = (wspan, hspan)
     layer_dims = [10, 10,10] 
-  
 
-    model =initialize_model_recurrent_naive((wspan, hspan), layer_dims, num_classes,totalistic=True,memory_horizon=MEMORY_CONSTANT) 
+    input_shape = (-1, MEMORY_CONSTANT*100)
+    output_shape = (1, 10, 10)
+
+    model = tf.keras.Sequential()
+    wspan, hspan = shape
+    diameter = 2*1+1
+    input_shape = (MEMORY_CONSTANT, wspan* hspan)
+    model = initialize_RNN((wspan, hspan), layer_dims, num_classes,totalistic=True,memory_horizon=MEMORY_CONSTANT) 
+
+    
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), loss=loss, metrics=['accuracy'])
     model.summary()
     early_stopping_callback = CustomCallback()
-    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=100       , batch_size=10)
+    model.fit(x_train, y_train, validation_data=(x_val,y_val), epochs=100       , batch_size=1)
     custom_layer = model.layers[1]
     print(model.layers)
     print(custom_layer.trainable_variables)   
