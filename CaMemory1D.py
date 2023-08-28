@@ -20,7 +20,7 @@ class CaMemory1D:
     # Constructor method
 
     def __init__(self, grid_size, initial_state=None, rule_type=RuleTypes.InnerTotalistic,
-                 neighbourhood_type=CaNeighbourhoods.Von_Neumann, memory_type=MemoryTypes.Default, memory_horizon=0,
+                memory_type=MemoryTypes.Default, memory_horizon=0,
                  ):
         self.rule_sheet = None
         self.state = None
@@ -64,7 +64,7 @@ class CaMemory1D:
         return y_values
 
     """
-      Generate a random CA rule that maps each of the 2^9 possible   to a random state (0,1)
+      Generate a random CA rule that maps each of the 2^3 possible   to a random state (0,1)
       For loop generates all permutations for 0-8 possible values of 1 and the array with all 1s is appended at the end
       seed : to control np.random
       """
@@ -95,7 +95,7 @@ class CaMemory1D:
         np_array = np.array(self.states, dtype=np.int32)
         print(np_array)
         plt.imshow(np_array, cmap=cmap)
-        plt.xticks(np.arange(-0.5, self.state.shape[0], 1), [])
+        plt.xticks(np.arange(-0.5, len(self.state), 1), [])
         plt.yticks(np.arange(-0.5, len(self.states), 1), [])
         plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
         plt.grid(True, color="black", linewidth=0.5)
@@ -133,7 +133,7 @@ class CaMemory1D:
             elif self.memory_type is MemoryTypes.Most_Frequent:
  
                 convolved_grid = np.convolve(get_state_padded(self.mostFrequentPastStateBinary()), kernel, mode='valid')
-               
+          
             else:
                 assert True, "Bad CA config."
 
@@ -147,24 +147,24 @@ class CaMemory1D:
             return next_state
 
         elif self.rule_type == RuleTypes.Default:
-            padded_state = get_state_padded(state)
+            padded_state=[]
+            if self.memory_type is MemoryTypes.Default:
+        
+                     padded_state = get_state_padded(self.state)
+            elif self.memory_type is MemoryTypes.Most_Frequent:
+
+                padded_state = get_state_padded(self.mostFrequentPastStateBinary())
             for i in range(1, padded_state.shape[0] - 1):
-              
-                    print(padded_state)
-                
-              
+                       
                     start_row = i -1
                     end_row = min(i + 2, padded_state.shape[0] )
-                 
-               
                     kernel = padded_state[start_row:end_row ]
-                    print(kernel)
+              
                     for index, pre_image in enumerate(self.rule_sheet[0]):
                         if (pre_image == kernel.flatten()).all():
-                            print(pre_image)
-                            print(self.rule_sheet[1][index][0])
+                       
 
-                            next_state[i ] =  self.rule_sheet[1][index][0]
+                            next_state[i-1 ] =  self.rule_sheet[1][index][0]
                             break
             if provided is None or set_state :
                 self.states.append(next_state.tolist())
@@ -195,55 +195,23 @@ class CaMemory1D:
     
         if len(self.states)<self.memory_horizon:
              return self.state
-        most_frequent = np.zeros(shape=(self.grid_size, self.grid_size), dtype=int)
-        # if self.memory_type== MemoryTypes.Most_Frequent:
-        # The amounts of past states to be checked depends on memory_horizon
-
-        #If there are less than T past states the NN behaves like it would without memory
+        most_frequent = np.zeros(shape=(self.grid_size), dtype=int)
 
         for state in self.states[-self.memory_horizon:]:
 
             for i in range(0, len(state)):
-                for j in range(0, len(state)):
-                    most_frequent[i][j] += state[i][j]
+                    most_frequent[i]+= state[i]
 
         for i in range(0, most_frequent.shape[0]):
-            for j in range(0, most_frequent.shape[1]):
-                # We can tell which as the most common past state based on the sum in binary CAs
-                if most_frequent[i][j] - 0.5 * self.memory_horizon> 0:
-                    most_frequent[i][j] = 1
-                elif most_frequent[i][j] - 0.5 * self.memory_horizon< 0:
-                    most_frequent[i][j] = 0
+            
+            
+                if most_frequent[i]  - 0.5 * self.memory_horizon> 0:
+                    most_frequent[i]  = 1
+                elif most_frequent[i]  - 0.5 * self.memory_horizon< 0:
+                    most_frequent[i]  = 0
                 else:
-                    most_frequent[i][j] = self.states[-1][i][j] #last state
+                    most_frequent[i]  = self.states[-1][i]  
     
 
         return most_frequent
-    def mostFrequentPastStateBinaryProvided(self,provided_states):
-    
-        if len(provided_states)<self.memory_horizon:
-             return self.state
-        most_frequent = np.zeros(shape=(self.grid_size, self.grid_size), dtype=int)
-        # if self.memory_type== MemoryTypes.Most_Frequent:
-        # The amounts of past states to be checked depends on memory_horizon
-
-        #If there are less than T past states the NN behaves like it would without memory
-
-        for state in provided_states[-self.memory_horizon:]:
-
-            for i in range(0, len(state)):
-                for j in range(0, len(state)):
-                    most_frequent[i][j] += state[i][j]
-       
-        for i in range(0, most_frequent.shape[0]):
-            for j in range(0, most_frequent.shape[1]):
-                # We can tell which as the most common past state based on the sum in binary CAs
-                if most_frequent[i][j] - 0.5 * self.memory_horizon> 0:
-                    most_frequent[i][j] = 1
-                elif most_frequent[i][j] - 0.5 * self.memory_horizon< 0:
-                    most_frequent[i][j] = 0
-                else:
-                    most_frequent[i][j] =provided_states[-1][i][j]
-    
-
-        return most_frequent
+ 
