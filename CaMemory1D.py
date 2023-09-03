@@ -45,16 +45,15 @@ class CaMemory1D:
         return y_values
     #returns a evolution secquence twice the lengths of the memory horzon
     def generate_training_data_sequences(self, x_values,sequence_length=3,random_length=False,upper_bound=10):
-    
+       
         if sequence_length < self.memory_horizon:
             raise TypeError("Memory Horizon should be lower than the sequence length to observe memory effects. "  )
 
 
         y_values = []
         for i in range(0,len(x_values)):
-            self.states=[]
-            self.states.append(x_values[i])
-            self.state=self.states[0]
+           
+            self.set_state_reset(x_values[i])
             if random_length:
                 sequence_length=random.randint(self.memory_horizon+1, upper_bound)
             self.step_multiple(sequence_length)
@@ -91,9 +90,9 @@ class CaMemory1D:
         cmap = ListedColormap(cmap_colors)
 
         plt.figure(facecolor="#242236") 
-        print(self.states)
+         
         np_array = np.array(self.states, dtype=np.int32)
-        print(np_array)
+        
         plt.imshow(np_array, cmap=cmap)
         plt.xticks(np.arange(-0.5, len(self.state), 1), [])
         plt.yticks(np.arange(-0.5, len(self.states), 1), [])
@@ -101,6 +100,15 @@ class CaMemory1D:
         plt.grid(True, color="black", linewidth=0.5)
        
         plt.show()
+    def plot_evolultion(self):
+        y_average=map(lambda x: np.average(x),self.states)
+        y_data=list(y_average)
+        print(y_data)
+        plt.plot(y_data)
+        plt.title(   "Average Cell Count after " + str(len(self.states))+" steps", color="white", fontsize=14)
+        plt.show()
+
+        
 
     """
     Sets Rule if it is in agreement with the rule-type, as different rule-types have different code for evolution
@@ -139,6 +147,7 @@ class CaMemory1D:
 
            
             for index,c in enumerate(state):
+               
                 next_state[c]  = self.rule_sheet[1][convolved_grid[c]]
                 #  print("maps to "+ str(  next_state[r][c]))
             if provided is None:
