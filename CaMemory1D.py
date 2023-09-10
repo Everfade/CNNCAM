@@ -34,6 +34,7 @@ class CaMemory1D:
         # If none are provided make init empty
         if initial_state is not None:
             self.state = initial_state
+            self.states=[initial_state]
         else:
             self.state = np.zeros((grid_size, grid_size), dtype=int)
 
@@ -68,8 +69,12 @@ class CaMemory1D:
       seed : to control np.random
       """
 
-    def generate_random_rule(self, seed):
-        return 0 
+    def set_random_rule(self, seed=1):
+        x=[0, 0, 0],[0, 0, 1],[0, 1, 0],[0, 1, 1],[1, 0, 0],[1, 0, 1],[1, 1, 0],[1, 1, 1]
+        y=np.random.choice(2,size=8,p=[0.5,0.5])
+        y = [[item]  for item in y]
+        print(y)
+        self.set_rule([x,y])
         
 
          
@@ -86,7 +91,7 @@ class CaMemory1D:
         else:
             state_to_render = state
 
-        cmap_colors = ["#ae8cc2", "#28a185"]
+        cmap_colors = ["#ae8cc2", "#000000"]
         cmap = ListedColormap(cmap_colors)
 
         plt.figure(facecolor="#242236") 
@@ -94,17 +99,22 @@ class CaMemory1D:
         np_array = np.array(self.states, dtype=np.int32)
         
         plt.imshow(np_array, cmap=cmap)
-        plt.xticks(np.arange(-0.5, len(self.state), 1), [])
-        plt.yticks(np.arange(-0.5, len(self.states), 1), [])
+        x_ticks = np.arange(0, self.grid_size, 1)   
+        y_ticks = np.arange(0, len(self.states), 1)  
+        
+        plt.xticks(x_ticks, [])
+        plt.yticks(y_ticks, [])
+        
         plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
-        plt.grid(True, color="black", linewidth=0.5)
-       
+         
         plt.show()
     def plot_evolultion(self):
         y_average=map(lambda x: np.average(x),self.states)
         y_data=list(y_average)
         print(y_data)
         plt.plot(y_data)
+        plt.ylabel("Average Cells ")    
+        plt.xlabel("Time Steps")
         plt.title(   "Average Cell Count after " + str(len(self.states))+" steps", color="white", fontsize=14)
         plt.show()
 
