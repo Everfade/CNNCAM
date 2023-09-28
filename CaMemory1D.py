@@ -85,6 +85,7 @@ class CaMemory1D:
     """
 
     def render_state(self, state=None, label=""):
+        plt.rcParams['axes.edgecolor'] = '#000000'
         state_to_render = None
         if state is None:
             state_to_render = self.state
@@ -97,17 +98,20 @@ class CaMemory1D:
         plt.figure(facecolor="#242236") 
          
         np_array = np.array(self.states, dtype=np.int32)
-        
+    
         plt.imshow(np_array, cmap=cmap)
-        x_ticks = np.arange(0, self.grid_size, 1)   
-        y_ticks = np.arange(0, len(self.states), 1)  
+     
+        ax = plt.gca()
+        ax.tick_params(axis='x', colors='white')
+        ax.tick_params(axis='y', colors='white')
         
-        plt.xticks(x_ticks, [])
-        plt.yticks(y_ticks, [])
-        
-        plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
-         
+        fig = plt.gcf()
+        img = plt.imshow(np_array, cmap=cmap)
+
+       # plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
+      
         plt.show()
+        return fig, img
     def plot_evolultion(self):
         y_average=map(lambda x: np.average(x),self.states)
         y_data=list(y_average)
@@ -117,6 +121,7 @@ class CaMemory1D:
         plt.xlabel("Time Steps")
         plt.title(   "Average Cell Count after " + str(len(self.states))+" steps", color="white", fontsize=14)
         plt.show()
+
 
         
 
@@ -178,16 +183,21 @@ class CaMemory1D:
                     start_row = i -1
                     end_row = min(i + 2, padded_state.shape[0] )
                     kernel = padded_state[start_row:end_row ]
-              
+                    match_found=False
                     for index, pre_image in enumerate(self.rule_sheet[0]):
                         if (pre_image == kernel.flatten()).all():
                        
-
+                           
                             next_state[i-1 ] =  self.rule_sheet[1][index][0]
+                          
+                            
+                            match_found=True
                             break
+                    if(not match_found):
+                        raise("no matching image")
             if provided is None or set_state :
                 self.states.append(next_state.tolist())
-                self.state = next_state
+                self.state = next_state.tolist()
             return next_state
 
     """
@@ -212,7 +222,7 @@ class CaMemory1D:
 
     def mostFrequentPastStateBinary(self):
     
-        if len(self.states)<self.memory_horizon:
+        if len(self.states)<self.memory_horizon or self.memory_horizon<1:
              return self.state
         most_frequent = np.zeros(shape=(self.grid_size), dtype=int)
 
