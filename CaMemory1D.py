@@ -17,7 +17,6 @@ def get_state_padded(any_state):
 
 
 class CaMemory1D:
-    # Constructor method
 
     def __init__(self, grid_size, initial_state=None, rule_type=RuleTypes.InnerTotalistic,
                 memory_type=MemoryTypes.Default, memory_horizon=0,
@@ -38,13 +37,31 @@ class CaMemory1D:
         else:
             self.state = np.zeros((grid_size, grid_size), dtype=int)
 
+    """
+       sets a rule based on the binary representation of the number
+    """
+    def set_rule_number(self,number):
+        if (number > 255 or number <0 ):
+            raise("Invalid rule number")
+        binary_string = format(number, '08b')
+        y_values = [[int(bit)]  for bit in binary_string]
+        self.set_rule([[[1, 1, 1], [1, 1, 0], [1, 0, 1], [1, 0, 0],[0, 1, 1], [0, 1, 0], [0, 0, 1], [0, 0, 0]],y_values])
+
+
+    """
+       returns a list of evolution steps
+    """
     def generate_training_data(self, x_values):
          
         y_values = []
         for x_value in x_values:
             y_values.append(self.step(x_value))
         return y_values
-    #returns a evolution secquence twice the lengths of the memory horzon
+    
+    """
+       returns a list of evolution secquence twice the lengths of the memory horizon
+    """
+   
     def generate_training_data_sequences(self, x_values,sequence_length=3,random_length=False,upper_bound=10):
        
         if sequence_length < self.memory_horizon:
@@ -67,7 +84,7 @@ class CaMemory1D:
       Generate a random CA rule that maps each of the 2^3 possible   to a random state (0,1)
       For loop generates all permutations for 0-8 possible values of 1 and the array with all 1s is appended at the end
       seed : to control np.random
-      """
+    """
 
     def set_random_rule(self, seed=1):
         x=[0, 0, 0],[0, 0, 1],[0, 1, 0],[0, 1, 1],[1, 0, 0],[1, 0, 1],[1, 1, 0],[1, 1, 1]
@@ -208,8 +225,9 @@ class CaMemory1D:
     def step_multiple(self, n):
         for i in range(0, n):
             self.step()
-
-    #Resets CA
+    """
+     Resets CA
+    """
     def set_state_reset(self,state):
         self.state=state
         self.states=[]
@@ -220,27 +238,50 @@ class CaMemory1D:
     """
 
 
-    def mostFrequentPastStateBinary(self):
-    
-        if len(self.states)<self.memory_horizon or self.memory_horizon<1:
-             return self.state
-        most_frequent = np.zeros(shape=(self.grid_size), dtype=int)
+    def mostFrequentPastStateBinary(self, provided=None):
+        if provided is None:
+        
+            if len(self.states)<self.memory_horizon or self.memory_horizon<1:
+                return self.state
+            most_frequent = np.zeros(shape=(self.grid_size), dtype=int)
 
-        for state in self.states[-self.memory_horizon:]:
+            for state in self.states[-self.memory_horizon:]:
 
-            for i in range(0, len(state)):
-                    most_frequent[i]+= state[i]
+                for i in range(0, len(state)):
+                        most_frequent[i]+= state[i]
 
-        for i in range(0, most_frequent.shape[0]):
-            
-            
-                if most_frequent[i]  - 0.5 * self.memory_horizon> 0:
-                    most_frequent[i]  = 1
-                elif most_frequent[i]  - 0.5 * self.memory_horizon< 0:
-                    most_frequent[i]  = 0
-                else:
-                    most_frequent[i]  = self.states[-1][i]  
-    
+            for i in range(0, most_frequent.shape[0]):
+                
+                
+                    if most_frequent[i]  - 0.5 * self.memory_horizon> 0:
+                        most_frequent[i]  = 1
+                    elif most_frequent[i]  - 0.5 * self.memory_horizon< 0:
+                        most_frequent[i]  = 0
+                    else:
+                        most_frequent[i]  = self.states[-1][i]  
+        
 
+            return most_frequent
+        else:
+             
+            if len(provided)<self.memory_horizon or self.memory_horizon<1:
+                return provided[-1]
+            most_frequent = np.zeros(shape=(self.grid_size), dtype=int)
+
+            for state in provided[-self.memory_horizon:]:
+
+                for i in range(0, len(state)):
+                        most_frequent[i]+= state[i]
+
+            for i in range(0, most_frequent.shape[0]):
+                
+                
+                    if most_frequent[i]  - 0.5 * self.memory_horizon> 0:
+                        most_frequent[i]  = 1
+                    elif most_frequent[i]  - 0.5 * self.memory_horizon< 0:
+                        most_frequent[i]  = 0
+                    else:
+                        most_frequent[i]  = self.states[-1][i]  
         return most_frequent
+
  
