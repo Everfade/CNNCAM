@@ -19,11 +19,11 @@ def get_state_padded(any_state):
 class CaMemory1D:
 
     def __init__(self, grid_size, initial_state=None, rule_type=RuleTypes.InnerTotalistic,
-                memory_type=MemoryTypes.Default, memory_horizon=0,
+                memory_type=MemoryTypes.Default, memory_horizon=1,
                  ):
         self.rule_sheet = None
         self.state = None
-        self.states = []
+        self.states = []    
         self.rule_type = rule_type
       
         self.memory_type = memory_type
@@ -35,17 +35,35 @@ class CaMemory1D:
             self.state = initial_state
             self.states=[initial_state]
         else:
-            self.state = np.zeros((grid_size, grid_size), dtype=int)
+            state=np.zeros(self.grid_size,dtype=int).tolist()
+            state[len(state)//2]=1
+            self.set_state_reset(state)
+    
 
     """
-       sets a rule based on the binary representation of the number
+        Evolves the automata with the predictions of the neural network for a specified amount of steps.
+        CA must have taken t=memory_horizon steps already 
+    """
+    def step_with_model(self,model,shape,step_count):
+        for step in range(0,step_count):
+            input_states=self.states[-self.memory_horizon:]
+            output=model.predict(   np.array(input_states).reshape(shape),verbose=False)
+            binary_sequence=np.argmax(output, axis=-1)
+            new_state = binary_sequence.reshape(self.grid_size)
+            self.states.append(new_state)
+        self.state=self.states[-1]
+
+
+    """
+       Sets a rule based on the binary representation of the number
     """
     def set_rule_number(self,number):
         if (number > 255 or number <0 ):
             raise("Invalid rule number")
         binary_string = format(number, '08b')
         y_values = [[int(bit)]  for bit in binary_string]
-        self.set_rule([[[1, 1, 1], [1, 1, 0], [1, 0, 1], [1, 0, 0],[0, 1, 1], [0, 1, 0], [0, 0, 1], [0, 0, 0]],y_values])
+        self.set_rule([[[1, 1, 1], [1, 1, 0], [1, 0, 1], [1, 0, 0],[0, 1, 1], [0, 1, 0], [0, 0, 1], [0, 0, 0]],
+                       y_values])
 
 
     """
@@ -121,10 +139,15 @@ class CaMemory1D:
         ax = plt.gca()
         ax.tick_params(axis='x', colors='white')
         ax.tick_params(axis='y', colors='white')
-        
+      
         fig = plt.gcf()
         img = plt.imshow(np_array, cmap=cmap)
-
+        plt.xlabel("Position")
+        plt.ylabel("Time")
+        ax.xaxis.label.set_color("white")
+        ax.yaxis.label.set_color("white")
+     
+   
        # plt.title(label + " CA steps:" + str(len(self.states)), color="white", fontsize=14)
       
         plt.show()
@@ -146,14 +169,13 @@ class CaMemory1D:
     Sets Rule if it is in agreement with the rule-type, as different rule-types have different code for evolution
     rule_sheet : provided rule sheet. Should be a list of pre-image and image
     """
-
     def set_rule(self, rule_sheet):
  
         self.rule_sheet = rule_sheet
 
     """
        Takes one step in the deterministic evolution of the system
-       """
+    """
 
     def step(self, provided=None,set_state=False):
         state = None
@@ -285,3 +307,42 @@ class CaMemory1D:
         return most_frequent
 
  
+class Wraparound1D(tf.keras.layers.Layer):
+    """
+    Apply periodic boundary conditions on a 1D sequence by padding 
+    along the axis.
+    padding : int or tuple, the amount to wrap around    
+    """
+
+    def __init__(self, padding=2, **kwargs):
+        super(Wraparound1D, self).__init__()
+        self.padding = padding
+    
+    def get_config(self):
+
+        config = super().get_config().copy()
+        config.update({
+            'padding': self.padding,
+        })
+        return config
+    def call(self, inputs):
+        return periodic_padding(inputs, self.padding)
+    
+def periodic_padding(seq, padding=1):
+    """
+    Create a periodic padding (wrap) around a 1D sequence, to emulate 
+    periodic boundary conditions.
+    """
+    seq_len = tf.shape(seq)[1]
+
+    pad_left = seq[:, -padding:]
+    pad_right = seq[:, :padding]
+
+    padded_seq = tf.concat([pad_left, seq, pad_right], axis=1)
+
+    return padded_seq
+ 
+class CustomCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self,epoch, logs=None):
+        if logs.get('val_accuracy') == 1:
+            self.model.stop_training = True 
