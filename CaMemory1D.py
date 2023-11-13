@@ -3,11 +3,12 @@ import tensorflow as tf
 from matplotlib.colors import ListedColormap
 from itertools import permutations, chain
 from CaAttributes import CaNeighbourhoods, MemoryTypes, RuleTypes
-import ca_funcs
+ 
 from scipy.signal import convolve2d
 import matplotlib.pyplot as plt
 from pprint import pprint
 import random
+import itertools
 
 
 def get_state_padded(any_state):
@@ -53,6 +54,40 @@ class CaMemory1D:
             self.states.append(new_state)
         self.state=self.states[-1]
 
+    def generate_train_test_validation(self):
+        x_values = [seq for seq in itertools.product("01", repeat=self.grid_size)]
+        x_values = [[int(bit) for bit in seq] for seq in x_values]
+
+        MEMORY_CONSTANT=self.memory_horizon
+        num_classes = 2  
+        sequence_length=MEMORY_CONSTANT*2
+        sequences= np.array(self.generate_training_data_sequences(x_values,sequence_length=sequence_length))
+
+    
+        np.random.shuffle(sequences)
+        x_sequence=sequences[:,MEMORY_CONSTANT:MEMORY_CONSTANT*2]
+        y_sequence=sequences[:,MEMORY_CONSTANT*2]
+        x_sequence.reshape(-1,MEMORY_CONSTANT* self.grid_size,1)
+        
+
+        Y_val_onehot =  tf.squeeze( tf.one_hot(tf.cast( y_sequence.reshape(-1,  self.grid_size,1), tf.int32), num_classes))
+        x_train = x_sequence 
+        y_train_full= Y_val_onehot
+        split_ratio = 0.25
+        split_point_x = int(len(x_train) * split_ratio)
+        split_point_y = int(len(y_train_full) * split_ratio)
+        x_test = x_train[:split_point_x]
+        y_test = y_train_full[:split_point_y]
+        x_train = x_train[split_point_x:]
+        y_train = y_train_full[split_point_y:]
+        split_point_x = int(len(x_test) * split_ratio)
+        split_point_y = int(len(y_test) * split_ratio)
+        x_val = x_test[:split_point_x]
+        y_val = y_test[:split_point_x]
+        x_test = x_test[split_point_x:]
+        y_test = y_test[split_point_x:]
+
+        return [x_train,y_train,x_val,y_val,x_test,y_test]
 
     """
        Sets a rule based on the binary representation of the number
@@ -306,7 +341,8 @@ class CaMemory1D:
                         most_frequent[i]  = self.states[-1][i]  
         return most_frequent
 
- 
+
+
 class Wraparound1D(tf.keras.layers.Layer):
     """
     Apply periodic boundary conditions on a 1D sequence by padding 
