@@ -382,3 +382,8 @@ class CustomCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self,epoch, logs=None):
         if logs.get('val_accuracy') == 1:
             self.model.stop_training = True 
+
+class CustomCallbackAcc(tf.keras.callbacks.Callback):
+    def on_epoch_end(self,epoch, logs=None):
+        if logs.get('accuracy') == 1:
+            self.model.stop_training = True 
